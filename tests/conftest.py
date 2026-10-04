@@ -2,7 +2,7 @@ import os
 import tempfile
 
 TEST_DATABASE_URL = os.environ.get(
-    "TEST_DATABASE_URL", "postgresql+asyncpg://oleg:oleg@localhost:5434/oleg_test"
+    "TEST_DATABASE_URL", "postgresql+asyncpg://oleg:oleg@127.0.0.1:5434/oleg_test"
 )
 
 # Settings are read from the environment; set them before any app import.
