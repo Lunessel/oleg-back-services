@@ -42,11 +42,16 @@ def sender() -> FakeSender:
 
 
 @pytest_asyncio.fixture
-async def session():
+async def session_factory():
     engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-    async with async_sessionmaker(engine, expire_on_commit=False)() as s:
-        yield s
+    yield async_sessionmaker(engine, expire_on_commit=False)
     await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def session(session_factory):
+    async with session_factory() as s:
+        yield s
