@@ -24,7 +24,7 @@
 
 ### Стек
 
-Python 3.12, aiogram 3, FastAPI, SQLAlchemy 2 (async) + asyncpg, Alembic, pydantic-settings, pytest + pytest-asyncio + httpx, uv.
+Python 3.12, aiogram 3, FastAPI, SQLAlchemy 2 (async) + asyncpg, Alembic, pydantic-settings, pytest + pytest-asyncio + httpx, pip (`requirements.txt`).
 
 ### Структура
 
@@ -71,7 +71,8 @@ docker-compose.yml
 | `DATABASE_URL` | `postgresql+asyncpg://...` |
 | `API_KEY` | секрет для `POST /api/leads` |
 | `PUBLIC_BASE_URL` | публічна адреса API, з неї будуються URL фото |
-| `MEDIA_DIR` | каталог фото всередині контейнера (за замовчуванням `/app/media`) |
+| `MEDIA_DIR` | каталог фото (за замовчуванням `media`; у docker compose — `/app/media`) |
+| `CONTACT_PHONE` | телефон, який бот показує, якщо заявку не вдалося надіслати |
 | `TZ` | часовий пояс для дат у боті (за замовчуванням `Europe/Kyiv`) |
 
 ## Дані
