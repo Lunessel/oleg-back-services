@@ -18,7 +18,7 @@
 - All user-facing bot and API texts are Ukrainian, copied verbatim from this plan.
 - Channel messages use HTML parse mode; every user-supplied value is passed through `html.escape`. Bot replies to users use no parse mode.
 - Phone rule (same as the site): after stripping everything except digits and `+`, the number must match `^(\+380|0)\d{9}$`. A bare `380XXXXXXXXX` (Telegram contact format) is accepted and stored as `+380XXXXXXXXX`.
-- Tests run against Postgres database `oleg_test` on `localhost:5433` (the compose `db` service). Telegram is never called in tests.
+- Tests run against Postgres database `oleg_test` on `localhost:5434` (the compose `db` service). Telegram is never called in tests.
 - Run tests with `.venv/Scripts/python -m pytest -q` (Windows venv).
 - Never commit `.env`.
 
@@ -142,7 +142,7 @@ API_KEY=
 PUBLIC_BASE_URL=http://localhost:8000
 CONTACT_PHONE=+38 (097) 011-33-61
 # Used only when running outside docker compose (compose overrides it):
-DATABASE_URL=postgresql+asyncpg://oleg:oleg@localhost:5433/oleg
+DATABASE_URL=postgresql+asyncpg://oleg:oleg@localhost:5434/oleg
 ```
 
 - [ ] **Step 2: Write Docker files**
@@ -180,7 +180,7 @@ services:
       POSTGRES_PASSWORD: oleg
       POSTGRES_DB: oleg
     ports:
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:5434:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/initdb:/docker-entrypoint-initdb.d:ro
@@ -253,7 +253,7 @@ import os
 import tempfile
 
 TEST_DATABASE_URL = os.environ.get(
-    "TEST_DATABASE_URL", "postgresql+asyncpg://oleg:oleg@localhost:5433/oleg_test"
+    "TEST_DATABASE_URL", "postgresql+asyncpg://oleg:oleg@localhost:5434/oleg_test"
 )
 
 # Settings are read from the environment; set them before any app import.
@@ -666,7 +666,7 @@ def downgrade() -> None:
 - [ ] **Step 9: Verify the migration against the real database**
 
 ```bash
-DATABASE_URL=postgresql+asyncpg://oleg:oleg@localhost:5433/oleg .venv/Scripts/python -m alembic upgrade head
+DATABASE_URL=postgresql+asyncpg://oleg:oleg@localhost:5434/oleg .venv/Scripts/python -m alembic upgrade head
 docker compose exec db psql -U oleg -d oleg -c "select count(*) from services" -c "select count(*) from tariff_rows"
 ```
 
@@ -3083,7 +3083,7 @@ docker compose up -d db
 .venv/Scripts/python -m pytest -q
 ```
 
-Тести працюють на базі `oleg_test` (порт `5433`), Telegram у них не викликається.
+Тести працюють на базі `oleg_test` (порт `5434`), Telegram у них не викликається.
 
 ## Бот
 
