@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import TariffRow
 
 CARDS = (
-    ("city", "По місту"),
-    ("intercity", "За місто / по Україні"),
+    ("city", "Авто по місту"),
+    ("intercity", "Авто за місто та по Україні"),
     ("loaders", "Послуги вантажників"),
 )
 CARD_TITLES = dict(CARDS)

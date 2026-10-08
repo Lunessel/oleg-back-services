@@ -16,8 +16,8 @@ async def test_get_cards_groups_rows_in_static_order(seeded):
     cards = await tariffs.get_cards(seeded)
 
     assert [(c["id"], c["title"]) for c in cards] == [
-        ("city", "По місту"),
-        ("intercity", "За місто / по Україні"),
+        ("city", "Авто по місту"),
+        ("intercity", "Авто за місто та по Україні"),
         ("loaders", "Послуги вантажників"),
     ]
     assert cards[0]["rows"] == [

@@ -45,7 +45,7 @@ async def test_pricing_shape(client, session):
     assert [c["id"] for c in cards] == ["city", "intercity", "loaders"]
     assert cards[1] == {
         "id": "intercity",
-        "title": "За місто / по Україні",
+        "title": "Авто за місто та по Україні",
         "rows": [
             {"label": "Вартість за кілометр", "value": "від 18 грн/км"},
             {"label": "Розрахунок", "value": "в обидва боки або в один бік"},
