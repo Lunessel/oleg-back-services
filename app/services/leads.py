@@ -53,10 +53,12 @@ def format_lead(source: str, payload: dict) -> str:
         lines += [
             f"Ім'я: {_e(payload['name'])}",
             f"Телефон: {_e(payload['phone'])}",
-            f"Тип: {SERVICE_TYPE_LABELS[payload['serviceType']]}",
+            f"Напрямок: {SERVICE_TYPE_LABELS[payload['serviceType']]}",
             f"Розмір буса: {VAN_SIZE_LABELS[payload['vanSize']]}",
             f"Вантажники: {LOADERS_LABELS[payload['loaders']]}",
-            f"Маршрут: {_e(payload['route'])}",
+            f"Послуга: {_e(payload['service'])}" + (" (вказано вручну)" if payload.get("serviceIsCustom") else ""),
+            f"Звідки: {_e(payload['from'])}",
+            f"Куди: {_e(payload['to'])}",
         ]
     elif source == "bot":
         count = payload.get("helpers_count") or 0

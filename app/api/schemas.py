@@ -27,13 +27,19 @@ class HeroLead(BaseModel):
 
 
 class CalculatorLead(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     source: Literal["calculator"]
     name: Name
     phone: Phone
     serviceType: Literal["city", "intercity"]
     vanSize: Literal["small", "medium", "maxi"]
     loaders: Literal["none", "one", "two", "more"]
-    route: Address
+    # A service title from the bot's list, or free text when the user picked "Інше".
+    service: Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=120)]
+    serviceIsCustom: bool = False
+    from_: Address = Field(alias="from")
+    to: Address
 
 
 class CallbackLead(BaseModel):

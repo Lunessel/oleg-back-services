@@ -85,12 +85,31 @@ async def test_create_calculator_lead(client, sender):
         "phone": "0671234567",
         "serviceType": "city",
         "vanSize": "small",
-        "loaders": "none",
-        "route": "Львів",
+        "loaders": "more",
+        "service": "Інша річ",
+        "serviceIsCustom": True,
+        "from": "Львів",
+        "to": "Винники",
     }
     response = await client.post("/api/leads", json=body, headers=AUTH)
     assert response.status_code == 201
     assert "Розмір буса: Малий" in sender.messages[0]
+    assert "Вантажники: 3+ вантажники" in sender.messages[0]
+    assert "Послуга: Інша річ (вказано вручну)" in sender.messages[0]
+    assert "Звідки: Львів\nКуди: Винники" in sender.messages[0]
+
+
+async def test_calculator_lead_requires_service_and_addresses(client):
+    body = {
+        "source": "calculator",
+        "name": "Олег",
+        "phone": "0671234567",
+        "serviceType": "city",
+        "vanSize": "small",
+        "loaders": "none",
+        "route": "Львів",
+    }
+    assert (await client.post("/api/leads", json=body, headers=AUTH)).status_code == 422
 
 
 async def test_lead_requires_api_key(client, sender):

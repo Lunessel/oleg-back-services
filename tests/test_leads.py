@@ -10,27 +10,36 @@ def test_format_hero():
     assert text == "<b>Заявка з головної форми</b>\nЗвідки: Львів\nКуди: Київ\nТелефон: +380671234567"
 
 
+CALCULATOR_PAYLOAD = {
+    "name": "Олег",
+    "phone": "0671234567",
+    "serviceType": "intercity",
+    "vanSize": "maxi",
+    "loaders": "two",
+    "service": "Доставка меблів",
+    "serviceIsCustom": False,
+    "from": "Львів",
+    "to": "Одеса",
+}
+
+
 def test_format_calculator_maps_enum_values():
-    text = format_lead(
-        "calculator",
-        {
-            "name": "Олег",
-            "phone": "0671234567",
-            "serviceType": "intercity",
-            "vanSize": "maxi",
-            "loaders": "two",
-            "route": "Львів — Одеса",
-        },
-    )
-    assert text == (
+    assert format_lead("calculator", CALCULATOR_PAYLOAD) == (
         "<b>Заявка з калькулятора вартості</b>\n"
         "Ім'я: Олег\n"
         "Телефон: 0671234567\n"
-        "Тип: Міжмісто\n"
+        "Напрямок: Міжмісто\n"
         "Розмір буса: Maxi\n"
         "Вантажники: 2 вантажники\n"
-        "Маршрут: Львів — Одеса"
+        "Послуга: Доставка меблів\n"
+        "Звідки: Львів\n"
+        "Куди: Одеса"
     )
+
+
+def test_format_calculator_marks_custom_service():
+    text = format_lead("calculator", {**CALCULATOR_PAYLOAD, "service": "Піаніно", "serviceIsCustom": True})
+    assert "Послуга: Піаніно (вказано вручну)" in text
 
 
 def test_format_callback_and_consult():
