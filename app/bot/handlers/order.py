@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bot.keyboards import BTN_NO, BTN_ORDER, BTN_YES, cancel_kb, contact_kb, main_menu, options_kb, yes_no_kb
+from app.bot.keyboards import BTN_NO, BTN_ORDER, BTN_OTHER, BTN_YES, cancel_kb, contact_kb, main_menu, options_kb, yes_no_kb
 from app.bot.states import OrderForm
 from app.config import Settings
 from app.services import catalog
@@ -66,16 +66,30 @@ async def got_name(message: Message, state: FSMContext, session_factory: async_s
         await _ask_helpers(message, state)
         return
     await state.set_state(OrderForm.service)
-    await message.answer("Оберіть послугу:", reply_markup=options_kb(titles))
+    await message.answer("Оберіть послугу:", reply_markup=options_kb(titles + [BTN_OTHER]))
 
 
 @router.message(OrderForm.service, F.text)
 async def got_service(message: Message, state: FSMContext, session_factory: async_sessionmaker[AsyncSession]) -> None:
+    if message.text == BTN_OTHER:
+        await state.set_state(OrderForm.custom_service)
+        await message.answer("Опишіть, що потрібно перевезти:", reply_markup=cancel_kb())
+        return
     titles = await _service_titles(session_factory)
     if message.text not in titles:
-        await message.answer("Будь ласка, оберіть послугу з кнопок.", reply_markup=options_kb(titles))
+        await message.answer("Будь ласка, оберіть послугу з кнопок.", reply_markup=options_kb(titles + [BTN_OTHER]))
         return
-    await state.update_data(service=message.text)
+    await state.update_data(service=message.text, service_is_custom=False)
+    await _ask_helpers(message, state)
+
+
+@router.message(OrderForm.custom_service, F.text)
+async def got_custom_service(message: Message, state: FSMContext) -> None:
+    service = message.text.strip()
+    if len(service) < 2:
+        await message.answer("Будь ласка, опишіть послугу текстом.")
+        return
+    await state.update_data(service=service, service_is_custom=True)
     await _ask_helpers(message, state)
 
 

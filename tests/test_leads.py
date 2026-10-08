@@ -78,6 +78,11 @@ def test_format_bot_with_helpers_and_username():
     )
 
 
+def test_format_bot_marks_custom_service():
+    text = format_lead("bot", {**BOT_PAYLOAD, "service": "Піаніно", "service_is_custom": True})
+    assert "Послуга: Піаніно (вказано вручну)" in text
+
+
 def test_format_bot_without_helpers_or_username():
     text = format_lead("bot", {**BOT_PAYLOAD, "helpers_count": 0, "username": None})
     assert "Вантажники: Ні" in text

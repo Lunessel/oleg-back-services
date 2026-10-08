@@ -65,7 +65,7 @@ def format_lead(source: str, payload: dict) -> str:
         helpers = f"Так, кількість — {count}" if count else "Ні"
         lines += [
             f"Ім'я: {_e(payload['name'])}",
-            f"Послуга: {_e(payload['service'])}",
+            f"Послуга: {_e(payload['service'])}" + (" (вказано вручну)" if payload.get("service_is_custom") else ""),
             f"Вантажники: {helpers}",
             f"Звідки: {_e(payload['address_from'])}",
             f"Куди: {_e(payload['address_to'])}",

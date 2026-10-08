@@ -151,6 +151,28 @@ async def test_full_order_flow_delivers_lead(make_chat, session, sender):
     ]
 
 
+async def test_order_with_custom_service(make_chat, session, sender):
+    await catalog.create_service(session, title="Переїзди", items=["a"], image="https://cdn/x.jpg")
+    user = make_chat(USER_ID)
+    await user.say(BTN_ORDER)
+
+    replies = await user.say("Олег")
+    buttons = [b.text for row in replies[0].reply_markup.keyboard for b in row]
+    assert buttons == ["Переїзди", "Інше", BTN_CANCEL]
+
+    # Free text without pressing "Інше" is still rejected.
+    assert texts(await user.say("Піаніно")) == ["Будь ласка, оберіть послугу з кнопок."]
+    assert texts(await user.say("Інше")) == ["Опишіть, що потрібно перевезти:"]
+    assert texts(await user.say(" ")) == ["Будь ласка, опишіть послугу текстом."]
+    assert texts(await user.say("Піаніно на 3 поверх")) == ["Чи потрібні вантажники?"]
+    for text in ("Ні", "A-1", "B-2", today_option(), "8:00", "0671234567"):
+        await user.say(text)
+
+    assert "Послуга: Піаніно на 3 поверх (вказано вручну)" in sender.messages[0]
+    lead = (await session.execute(select(Lead))).scalar_one()
+    assert lead.payload["service_is_custom"] is True
+
+
 async def test_order_without_services_skips_service_step(make_chat, session, sender):
     user = make_chat(USER_ID)
     await user.say(BTN_ORDER)

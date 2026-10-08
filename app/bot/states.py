@@ -4,6 +4,7 @@ from aiogram.fsm.state import State, StatesGroup
 class OrderForm(StatesGroup):
     name = State()
     service = State()
+    custom_service = State()
     helpers_needed = State()
     helpers_count = State()
     address_from = State()

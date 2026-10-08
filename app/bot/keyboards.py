@@ -3,6 +3,7 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 BTN_ORDER = "Залишити заявку"
 BTN_ADMIN = "Адмін-панель"
 BTN_CANCEL = "Скасувати"
+BTN_OTHER = "Інше"
 BTN_YES = "Так"
 BTN_NO = "Ні"
 BTN_CONTACT = "Надіслати номер телефону"
