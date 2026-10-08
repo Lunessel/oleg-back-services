@@ -12,7 +12,7 @@ from sqlalchemy import select
 
 from app.bot.admin_kb import SvcCb, TarCb
 from app.bot.handlers import admin_services, admin_tariffs, order, start
-from app.bot.handlers.order import date_options
+
 from app.bot.keyboards import BTN_ADMIN, BTN_CANCEL, BTN_CONTACT, BTN_ORDER
 from app.config import get_settings
 from app.db.models import Lead, TariffRow
@@ -108,8 +108,81 @@ def make_chat(session_factory, sender):
         router._parent_router = None
 
 
+class Clock:
+    """The bot's notion of "now", fixed so dialogs don't depend on when the tests run."""
+
+    def __init__(self) -> None:
+        self.now = datetime(2026, 10, 5, 7, 30, tzinfo=ZoneInfo(get_settings().tz))
+
+
+@pytest.fixture(autouse=True)
+def clock(monkeypatch) -> Clock:
+    clock = Clock()
+    monkeypatch.setattr(order, "_now", lambda settings: clock.now)
+    return clock
+
+
 def today_option() -> str:
-    return date_options(datetime.now(ZoneInfo(get_settings().tz)).date())[0]
+    return "05-10-2026"
+
+
+def reply_buttons(calls: list) -> list[str]:
+    return [b.text for row in calls[0].reply_markup.keyboard for b in row]
+
+
+async def _reach_date_step(user) -> None:
+    for text in (BTN_ORDER, "Олег", "Ні", "A-1", "B-2"):
+        await user.say(text)
+
+
+async def test_today_offers_only_upcoming_hours(make_chat, session, clock):
+    clock.now = clock.now.replace(hour=14, minute=30)
+    user = make_chat(USER_ID)
+    await _reach_date_step(user)
+
+    replies = await user.say(today_option())
+
+    assert reply_buttons(replies) == ["15:00", "16:00", "17:00", "18:00", "19:00", "20:00", BTN_CANCEL]
+    assert texts(await user.say("10:00")) == ["Будь ласка, оберіть час з кнопок."]
+
+
+async def test_date_list_starts_tomorrow_in_the_evening(make_chat, session, clock):
+    clock.now = clock.now.replace(hour=20, minute=10)
+    user = make_chat(USER_ID)
+    for text in (BTN_ORDER, "Олег", "Ні", "A-1"):
+        await user.say(text)
+
+    replies = await user.say("B-2")
+
+    assert reply_buttons(replies)[0] == "06-10-2026"
+    assert texts(await user.say(today_option())) == ["Будь ласка, оберіть дату з кнопок."]
+
+
+async def test_hour_that_passed_while_choosing_is_rejected(make_chat, session, clock):
+    clock.now = clock.now.replace(hour=15, minute=50)
+    user = make_chat(USER_ID)
+    await _reach_date_step(user)
+    await user.say(today_option())
+
+    clock.now = clock.now.replace(hour=16, minute=5)
+    replies = await user.say("16:00")
+
+    assert texts(replies) == ["Будь ласка, оберіть час з кнопок."]
+    assert reply_buttons(replies)[0] == "17:00"
+
+
+async def test_today_without_hours_left_goes_back_to_dates(make_chat, session, clock):
+    clock.now = clock.now.replace(hour=19, minute=50)
+    user = make_chat(USER_ID)
+    await _reach_date_step(user)
+    await user.say(today_option())
+
+    clock.now = clock.now.replace(hour=20, minute=5)
+    replies = await user.say("20:00")
+
+    assert texts(replies) == ["На цю дату вже немає вільних годин. Оберіть іншу дату:"]
+    assert reply_buttons(replies)[0] == "06-10-2026"
+    assert texts(await user.say("06-10-2026")) == ["Оберіть час перевезення:"]
 
 
 async def test_full_order_flow_delivers_lead(make_chat, session, sender):

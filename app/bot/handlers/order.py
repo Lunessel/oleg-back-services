@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from aiogram import F, Router
@@ -16,11 +16,20 @@ from app.services.phone import normalize_phone
 router = Router()
 
 SERVICE_UNSET = "не вказано"
-TIME_OPTIONS = [f"{hour}:00" for hour in range(8, 21)]
+DATE_FORMAT = "%d-%m-%Y"
+WORK_HOURS = range(8, 21)  # start hours offered to the user: 8:00 ... 20:00
 
 
-def date_options(today: date) -> list[str]:
-    return [(today + timedelta(days=offset)).strftime("%d-%m-%Y") for offset in range(7)]
+def date_options(now: datetime) -> list[str]:
+    """Seven days starting today, or tomorrow once today's last start hour has begun."""
+    first = now.date() if now.hour < WORK_HOURS[-1] else now.date() + timedelta(days=1)
+    return [(first + timedelta(days=offset)).strftime(DATE_FORMAT) for offset in range(7)]
+
+
+def time_options(day: str, now: datetime) -> list[str]:
+    """All work hours for a future day; for today only the hours that have not started yet."""
+    hours = [hour for hour in WORK_HOURS if day != now.strftime(DATE_FORMAT) or hour > now.hour]
+    return [f"{hour}:00" for hour in hours]
 
 
 def parse_helpers_count(text: str) -> int | None:
@@ -31,8 +40,8 @@ def parse_helpers_count(text: str) -> int | None:
     return count if count > 0 else None
 
 
-def _today(settings: Settings) -> date:
-    return datetime.now(ZoneInfo(settings.tz)).date()
+def _now(settings: Settings) -> datetime:
+    return datetime.now(ZoneInfo(settings.tz))
 
 
 async def _service_titles(session_factory: async_sessionmaker[AsyncSession]) -> list[str]:
@@ -126,24 +135,35 @@ async def got_address_from(message: Message, state: FSMContext) -> None:
 async def got_address_to(message: Message, state: FSMContext, settings: Settings) -> None:
     await state.update_data(address_to=message.text.strip())
     await state.set_state(OrderForm.date)
-    await message.answer("Оберіть дату перевезення:", reply_markup=options_kb(date_options(_today(settings))))
+    await message.answer("Оберіть дату перевезення:", reply_markup=options_kb(date_options(_now(settings))))
 
 
 @router.message(OrderForm.date, F.text)
 async def got_date(message: Message, state: FSMContext, settings: Settings) -> None:
-    options = date_options(_today(settings))
+    now = _now(settings)
+    options = date_options(now)
     if message.text not in options:
         await message.answer("Будь ласка, оберіть дату з кнопок.", reply_markup=options_kb(options))
         return
     await state.update_data(date=message.text)
     await state.set_state(OrderForm.time)
-    await message.answer("Оберіть час перевезення:", reply_markup=options_kb(TIME_OPTIONS))
+    await message.answer("Оберіть час перевезення:", reply_markup=options_kb(time_options(message.text, now)))
 
 
 @router.message(OrderForm.time, F.text)
-async def got_time(message: Message, state: FSMContext) -> None:
-    if message.text not in TIME_OPTIONS:
-        await message.answer("Будь ласка, оберіть час з кнопок.", reply_markup=options_kb(TIME_OPTIONS))
+async def got_time(message: Message, state: FSMContext, settings: Settings) -> None:
+    # Recomputed here: an hour offered at the date step may have started while the user was choosing.
+    now = _now(settings)
+    options = time_options((await state.get_data())["date"], now)
+    if not options:
+        await state.set_state(OrderForm.date)
+        await message.answer(
+            "На цю дату вже немає вільних годин. Оберіть іншу дату:",
+            reply_markup=options_kb(date_options(now)),
+        )
+        return
+    if message.text not in options:
+        await message.answer("Будь ласка, оберіть час з кнопок.", reply_markup=options_kb(options))
         return
     await state.update_data(time=message.text)
     await state.set_state(OrderForm.phone)
