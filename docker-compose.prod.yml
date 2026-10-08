@@ -1,0 +1,104 @@
+# Production stack: site + API + bot + Postgres behind Caddy (HTTPS).
+# Expects ../oleg-webapp next to this repo. See DEPLOY.md.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+
+# Separate project name so the prod volumes never mix with the dev stack (docker-compose.yml).
+name: oleg-prod
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-backend-env: &backend-env
+  DATABASE_URL: postgresql+asyncpg://oleg:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/oleg
+  MEDIA_DIR: /app/media
+  # Image URLs point at the internal API address; the site rewrites them to its own /media path.
+  PUBLIC_BASE_URL: http://api:8000
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: oleg
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: oleg
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oleg -d oleg"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    logging: *logging
+
+  api:
+    build: .
+    command: sh -c "alembic upgrade head && uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --proxy-headers"
+    env_file: .env
+    environment: *backend-env
+    volumes:
+      - media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    logging: *logging
+
+  bot:
+    build: .
+    command: python -m app.bot.main
+    env_file: .env
+    environment: *backend-env
+    volumes:
+      - media:/app/media
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *logging
+
+  web:
+    build:
+      context: ../oleg-webapp
+      args:
+        BACKEND_URL: http://api:8000
+    environment:
+      BACKEND_URL: http://api:8000
+      BACKEND_API_KEY: ${API_KEY:?set API_KEY in .env}
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *logging
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    restart: unless-stopped
+    logging: *logging
+
+volumes:
+  pgdata:
+  media:
+  caddy_data:
+  caddy_config:
