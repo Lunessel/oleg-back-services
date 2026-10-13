@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     public_base_url: str = "http://localhost:8000"
     media_dir: Path = Path("media")
     tz: str = "Europe/Kyiv"
-    contact_phone: str = "+38 (097) 011-33-61"
+    contact_phone: str = "+38 (073) 110-33-61"
 
     @field_validator("admin_ids", mode="before")
     @classmethod
